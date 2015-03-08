@@ -18,12 +18,13 @@
 Node::Node( QGraphicsItem *parent )
     : QGraphicsPathItem( parent )
 {
-	QPainterPath p;
-	p.addRoundedRect(-50, -15, 100, 30, 5, 5);
+    QPainterPath p;
+    p.addRoundedRect( 0, 0, 100, 50, 5, 5 );
     setPath( p );
+
     setFlag( QGraphicsItem::ItemIsMovable );
     setFlag( QGraphicsItem::ItemIsSelectable );
-	horzMargin = 20;
+    horzMargin = 40;
 	vertMargin = 5;
 	width = horzMargin;
 	height = vertMargin;
@@ -56,20 +57,23 @@ Port* Node::addPort( const QString &name, bool isOutput, int flags, int ptr )
 		width = w + horzMargin;
 	height += h;
 
-	QPainterPath p;
+    QPainterPath p;
     p.addRoundedRect( -width/2, -height/2, width, height, 5, 5 );
-	setPath(p);
+    setPath( p );
 
 	int y = -height / 2 + vertMargin + port->radius();
-    foreach( QGraphicsItem *port_, childItems() ) {
+
+    foreach( QGraphicsItem *port_, childItems() )
+    {
         if ( port_->type() != Port::Type )
 			continue;
 
         Port *port = (Port*) port_;
+
         if ( port->isOutput() )
-            port->setPos( width/2 + port->radius(), y );
+            port->setPos( width/2, y );
 		else
-            port->setPos( -width/2 - port->radius(), y );
+            port->setPos( -width/2, y );
 		y += h;
 	}
 
@@ -117,9 +121,9 @@ void Node::save( QDataStream &ds )
 {
 	ds << pos();
 
-	int count(0);
+    int count( 0 );
 
-    foreach( QGraphicsItem *port_, childItems() )
+    foreach( QGraphicsItem* port_, childItems() )
 	{
         if ( port_->type() != Port::Type )
 			continue;
@@ -129,12 +133,12 @@ void Node::save( QDataStream &ds )
 
 	ds << count;
 
-    foreach( QGraphicsItem *port_, childItems() )
+    foreach( QGraphicsItem* port_, childItems() )
 	{
         if ( port_->type() != Port::Type )
 			continue;
 
-        Port *port = (Port*) port_;
+        Port* port = (Port*) port_;
 		ds << (quint64) port;
 		ds << port->portName();
 		ds << port->isOutput();
@@ -149,7 +153,7 @@ void Node::load( QDataStream &ds, QMap< quint64, Port* > &portMap )
 {
 	QPointF p;
 	ds >> p;
-	setPos(p);
+    setPos( p );
 	int count;
 	ds >> count;
     for ( int i = 0; i < count; i++ )
@@ -175,10 +179,14 @@ void Node::paint( QPainter *painter, const QStyleOptionGraphicsItem *option, QWi
     Q_UNUSED( option )
     Q_UNUSED( widget )
 
-    if ( isSelected() ) {
+    if ( isSelected() )
+    {
         painter->setPen( Qt::NoPen );
         painter->setBrush( QColor( 145, 145, 145 ) );
-	} else {
+    }
+
+    else
+    {
         painter->setPen( Qt::NoPen );
         painter->setBrush( QColor( 130, 130, 130 ) );
 	}
@@ -194,7 +202,7 @@ Node* Node::clone()
     Node *b = new Node( 0 );
     this->scene()->addItem( b );
 
-    foreach( QGraphicsItem *port_, childItems() )
+    foreach( QGraphicsItem* port_, childItems() )
 	{
         if ( port_->type() == Port::Type )
 		{
@@ -213,7 +221,7 @@ QVector< Port* > Node::ports()
 {
     QVector< Port* > res;
 
-    foreach( QGraphicsItem *port_, childItems() )
+    foreach( QGraphicsItem* port_, childItems() )
 	{
         if ( port_->type() == Port::Type )
             res.append( (Port*) port_ );

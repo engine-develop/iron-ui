@@ -57,6 +57,8 @@ public:
 
 private slots:
 
+    void newFile();
+
 	void saveFile();
 
     void openFile();

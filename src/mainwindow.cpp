@@ -54,6 +54,11 @@ MainWindow::MainWindow( QWidget* parent )
 
     // Create actions
     //
+    QAction* newAct = new QAction( tr("&New"), this );
+    newAct->setShortcuts( QKeySequence::New );
+    newAct->setStatusTip( tr( "Create a new file" )  );
+    connect( newAct, SIGNAL( triggered() ), this, SLOT( newFile() ) );
+
     QAction* loadAct = new QAction( tr("&Open"), this );
     loadAct->setShortcuts( QKeySequence::Open );
     loadAct->setStatusTip( tr( "Open a file" )  );
@@ -72,6 +77,7 @@ MainWindow::MainWindow( QWidget* parent )
     // Add menu items
     //
     fileMenu = menuBar()->addMenu( tr( "&File" ) );
+    fileMenu->addAction( newAct );
     fileMenu->addAction( loadAct );
     fileMenu->addAction( saveAct );
     fileMenu->addSeparator();
@@ -140,6 +146,15 @@ void MainWindow::setColors()
                          "}"
                     );
 
+}
+
+//------------------------------------------------------------------------------
+//
+
+void MainWindow::newFile()
+{
+    MainWindow* other = new MainWindow;
+    other->show();
 }
 
 //------------------------------------------------------------------------------

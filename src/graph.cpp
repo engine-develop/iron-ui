@@ -12,6 +12,7 @@
 #include "port.hpp"
 #include "connection.hpp"
 #include "node.hpp"
+#include "typestore.hpp"
 
 #include "graph.hpp"
 
@@ -159,16 +160,22 @@ void GraphView::dragMoveEvent( QDragMoveEvent* event )
 
 void GraphView::dropEvent( QDropEvent* event )
 {
-    Node* n = new Node( 0x0 );
-    scene()->addItem( n );
+    const QMimeData* mdata = event->mimeData();
+    if ( !mdata->hasText() ) return;
 
-    static const char* names[] = { "Vin", "Voutsadfasdf", "Imin", "Imax", "mul", "add", "sub", "div", "Conv", "FFT" };
-    for ( int i = 0; i < 4 + rand() % 3; i++ )
+    QString typeData = mdata->text();
+    QStringList typeDataList = typeData.split( ":" );
+
+    if ( typeDataList[ 0 ] == "variable" )
     {
-        n->addPort( names[ rand() % 10 ], rand() % 2, 0, 0 );
+        //Variable* v = TypeStoreView::createVariable( scene(), typeDataList[ 1 ].toUInt() );
     }
 
-    n->setPos( mapToScene( event->pos() ) );
+    else if ( typeDataList[ 0 ] == "node" )
+    {
+        Node* n = TypeStoreView::createNode( scene(), typeDataList[ 1 ].toUInt() );
+        n->setPos( mapToScene( event->pos() ) );
+    }
 
     event->acceptProposedAction();
 }

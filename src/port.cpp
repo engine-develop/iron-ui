@@ -110,12 +110,12 @@ void Port::setPortFlags( int f )
     }
 
     else if ( m_portFlags & NamePort )
-	{
+    {
         QFont font( scene()->font() );
         font.setBold( true );
         label->setFont( font );
         setPath( QPainterPath() );
-	}
+    }
 }
 
 //------------------------------------------------------------------------------
