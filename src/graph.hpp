@@ -1,5 +1,5 @@
-#ifndef IRUI_Graph_HPP
-#define IRUI_Graph_HPP
+#ifndef IRUI_GRAPH_HPP
+#define IRUI_GRAPH_HPP
 
 // Copyright (C) 2015 Engine Development
 //
@@ -25,10 +25,17 @@
 //------------------------------------------------------------------------------
 //
 
+// STD
+#include <unordered_map>
+
+// Qt
 #include <QDebug>
 #include <QObject>
 #include <QGraphicsScene>
 #include <QGraphicsView>
+
+// Engine
+#include "types.hpp"
 
 //------------------------------------------------------------------------------
 //
@@ -42,7 +49,10 @@ class QGraphicsView;
 class Connection;
 class QGraphicsItem;
 class QPointF;
+class Variable;
 class Node;
+class Graph;
+class Port;
 
 //------------------------------------------------------------------------------
 //
@@ -54,7 +64,11 @@ class GraphScene
 
 public:
 
-    explicit GraphScene( QObject* parent = 0x0 );
+    GraphScene( QObject* parent = 0x0 );
+
+    void setGraph( Graph* graph );
+
+    Graph* graph() const;
 
     virtual void dragEnterEvent( QGraphicsSceneDragDropEvent* event );
     virtual void dragLeaveEvent( QGraphicsSceneDragDropEvent* event );
@@ -62,8 +76,11 @@ public:
     virtual void dropEvent( QDropEvent* event );
     virtual void keyPressEvent( QKeyEvent* event );
 
-    void removeNode( QGraphicsItem* item );
     void removeSelected();
+
+protected:
+
+    Graph* m_graph;
 
 };
 
@@ -77,7 +94,11 @@ class GraphView
 
 public:
 
-    explicit GraphView( QGraphicsScene* scene, QWidget* parent = 0x0 );
+    GraphView( QGraphicsScene* scene, QWidget* parent = 0x0 );
+
+    void setGraph( Graph* graph );
+
+    Graph* graph() const;
 
     virtual void dragEnterEvent( QDragEnterEvent* event );
     virtual void dragLeaveEvent( QDragLeaveEvent* event );
@@ -90,6 +111,7 @@ public:
 
 protected:
 
+    Graph* m_graph;
     bool m_pan;
     int m_panStartX, m_panStartY;
     double m_panPosX, m_panPosY;
@@ -106,23 +128,70 @@ class Graph
 
 public:
 
-    explicit Graph( QObject* parent = 0x0 );
+    enum Type
+    {
+        Type_Setup = 0,
+        Type_Loop  = 1
+    };
 
-    void install( GraphScene* scene );
+    Graph( Type type,
+           QWidget* parent = 0x0 );
+
+    const Type& type() const;
+
+    //----------
+    //
+
+    GraphScene* scene();
+
+    GraphView* view();
+
+    void clear();
+
+    //----------
+    //
+
+    void addComponent( QGraphicsItem* component );
+
+    void addComponents( QList< QGraphicsItem* >& components );
+
+    void removeComponent( QGraphicsItem* component );
+
+    void removeComponents( QList< QGraphicsItem* >& components );
+
+    QList< QGraphicsItem* > components() const;
+
+    QList< QGraphicsItem* > componentsByType( const int& type ) const;
+
+    QGraphicsItem* component( const uint32_t& id );
+
+    //----------
+    //
+
+    Variable* createVariable( const uint32_t& typeId );
+
+    Node* createNode( const uint32_t& typeId );
+
+    Variable* addAttribute( Node* node,
+                            const uint32_t& typeId,
+                            const QString& name,
+                            Direction direction );
 
     bool eventFilter( QObject*, QEvent* );
-
-    void save( QDataStream &ds );
-    void load( QDataStream &ds );
 
 private:
 
     QGraphicsItem* itemAt( const QPointF& );
 
-    GraphScene* scene;
-    GraphView* view;
-    Connection* conn;
+    uint32_t getComponentId();
+
+    Type m_type;
+    GraphScene* m_scene;
+    GraphView* m_view;
+    Connection* m_conn;
+
+    std::unordered_map< uint32_t, QGraphicsItem* > m_components;
 
 };
 
-#endif // IRUI_Graph_HPP
+#endif // IRUI_GRAPH_HPP

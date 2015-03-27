@@ -2,9 +2,14 @@
 //
 
 // Qt
+#include <QtWidgets>
 #include <QPalette>
 #include <QFileDialog>
+#include <QString>
 
+// Engine
+#include "sketch.hpp"
+#include "typestore.hpp"
 #include "node.hpp"
 #include "graph.hpp"
 
@@ -22,30 +27,21 @@ MainWindow::MainWindow( QWidget* parent )
     setWindowTitle( windowTitle );
     resize( 1000, 700 );
 
-    // Create graphics scene
+    // Create sketch
     //
-    scene = new GraphScene( this );
-
-    // Create graphics view
-    //
-    view = new GraphView( scene, this );
-
-    // Create graph and install graphics scene
-    //
-    graph = new Graph( this );
-    graph->install( scene );
+    m_sketch = new Sketch( this );
 
     // Create TypeStore view
     //
-    typeStoreView = new TypeStoreView( this );
+    m_typeStore = new TypeStore( this );
 
     // Create central widget, layouts
     //
     QWidget* centralWidget = new QWidget( this );
     QVBoxLayout* vLayout = new QVBoxLayout( this );
     QSplitter* vSplitter = new QSplitter( Qt::Vertical );
-    vSplitter->addWidget( view );
-    vSplitter->addWidget( typeStoreView );
+    vSplitter->addWidget( m_sketch );
+    vSplitter->addWidget( m_typeStore );
     vSplitter->setStretchFactor( 0, 2 );
     vLayout->addWidget( vSplitter );
     centralWidget->setLayout( vLayout );
@@ -59,15 +55,20 @@ MainWindow::MainWindow( QWidget* parent )
     newAct->setStatusTip( tr( "Create a new file" )  );
     connect( newAct, SIGNAL( triggered() ), this, SLOT( newFile() ) );
 
-    QAction* loadAct = new QAction( tr("&Open"), this );
-    loadAct->setShortcuts( QKeySequence::Open );
-    loadAct->setStatusTip( tr( "Open a file" )  );
-    connect( loadAct, SIGNAL( triggered() ), this, SLOT( openFile() ) );
+    QAction* openAct = new QAction( tr("&Open"), this );
+    openAct->setShortcuts( QKeySequence::Open );
+    openAct->setStatusTip( tr( "Open a file" )  );
+    connect( openAct, SIGNAL( triggered() ), this, SLOT( openFile() ) );
 
     QAction* saveAct = new QAction( tr( "&Save" ), this );
     saveAct->setShortcuts( QKeySequence::Save );
     saveAct->setStatusTip( tr( "Save a file" ) );
     connect( saveAct, SIGNAL( triggered() ), this, SLOT( saveFile() ) );
+
+    QAction* closeAct = new QAction( tr( "&Close" ), this );
+    closeAct->setShortcuts( QKeySequence::Close );
+    closeAct->setStatusTip( tr( "Save a file" ) );
+    connect( closeAct, SIGNAL( triggered() ), this, SLOT( closeFile() ) );
 
     QAction* quitAct = new QAction( tr( "&Quit" ), this );
     quitAct->setShortcuts( QKeySequence::Quit );
@@ -76,28 +77,16 @@ MainWindow::MainWindow( QWidget* parent )
 
     // Add menu items
     //
-    fileMenu = menuBar()->addMenu( tr( "&File" ) );
-    fileMenu->addAction( newAct );
-    fileMenu->addAction( loadAct );
-    fileMenu->addAction( saveAct );
-    fileMenu->addSeparator();
-    fileMenu->addAction( quitAct );
+    m_fileMenu = menuBar()->addMenu( tr( "&File" ) );
+    m_fileMenu->addAction( newAct );
+    m_fileMenu->addAction( openAct );
+    m_fileMenu->addAction( saveAct );
+    m_fileMenu->addAction( closeAct );
+    m_fileMenu->addSeparator();
+    m_fileMenu->addAction( quitAct );
 
-    setColors();
-}
-
-//------------------------------------------------------------------------------
-//
-
-MainWindow::~MainWindow()
-{
-}
-
-//------------------------------------------------------------------------------
-//
-
-void MainWindow::setColors()
-{
+    // Set UI colors
+    //
     qApp->setStyle( QStyleFactory::create( "plastique" ) );
 
     QPalette palette = QApplication::palette();
@@ -151,44 +140,57 @@ void MainWindow::setColors()
 //------------------------------------------------------------------------------
 //
 
-void MainWindow::newFile()
+MainWindow::~MainWindow()
+{
+}
+
+//------------------------------------------------------------------------------
+//
+
+bool MainWindow::newFile()
 {
     MainWindow* other = new MainWindow;
     other->show();
+
+    return true;
 }
 
 //------------------------------------------------------------------------------
 //
 
-void MainWindow::saveFile()
+bool MainWindow::openFile()
 {
-	QString fname = QFileDialog::getSaveFileName();
+    QString fileName = QFileDialog::getOpenFileName( this );
 
-    if ( fname.isEmpty() )
+    if ( fileName.isEmpty() )
     {
-		return;
+        return false;
     }
 
-    QFile f( fname );
-    f.open( QFile::WriteOnly );
-    QDataStream ds( &f );
-    graph->save( ds );
+    return read( fileName.toStdString(), m_sketch );
 }
 
 //------------------------------------------------------------------------------
 //
 
-void MainWindow::openFile()
+bool MainWindow::saveFile()
 {
-	QString fname = QFileDialog::getOpenFileName();
+    QString fileName = QFileDialog::getSaveFileName( this );
 
-    if ( fname.isEmpty() )
+    if ( fileName.isEmpty() )
     {
-		return;
+        return false;
     }
 
-    QFile f( fname );
-    f.open( QFile::ReadOnly );
-    QDataStream ds( &f );
-    graph->load( ds );
+    return write( m_sketch, fileName.toStdString() );
+}
+
+//------------------------------------------------------------------------------
+//
+
+bool MainWindow::closeFile()
+{
+    m_sketch->clear();
+
+    return true;
 }

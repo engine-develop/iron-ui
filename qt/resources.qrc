@@ -1,6 +1,7 @@
 <RCC>
     <qresource prefix="/icons">
         <file>resources/icons/node.png</file>
+        <file>resources/icons/variable.png</file>
     </qresource>
     <qresource prefix="/images">
         <file>resources/images/scene_bkg_tile.png</file>

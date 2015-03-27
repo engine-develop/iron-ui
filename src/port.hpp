@@ -25,13 +25,39 @@
 //------------------------------------------------------------------------------
 //
 
+// Qt
+#include <QGraphicsTextItem>
 #include <QGraphicsPathItem>
+
+// Engine
+#include "types.hpp"
 
 //------------------------------------------------------------------------------
 //
 
+class Variable;
 class Node;
 class Connection;
+class QPainter;
+
+//------------------------------------------------------------------------------
+//
+
+class PortValue
+    : public QGraphicsTextItem
+{
+
+public:
+
+    PortValue( QGraphicsItem* parent = 0x0 );
+
+    void keyPressEvent( QKeyEvent* event );
+
+    void paint( QPainter* p,
+                const QStyleOptionGraphicsItem* o,
+                QWidget* w );
+
+};
 
 //------------------------------------------------------------------------------
 //
@@ -43,46 +69,46 @@ class Port
 public:
 
 	enum { Type = QGraphicsItem::UserType + 1 };
-	enum { NamePort = 1, TypePort = 2 };
 
-    Port( QGraphicsItem *parent = 0 );
+    enum State
+    {
+        Expanded = 0x1
+    };
+
+    Port( QGraphicsItem* parent = 0x0 );
+
     ~Port();
 
-    void setNode( Node* );
-    void setName( const QString &n );
-    void setIsOutput( bool o );
-	int radius();
-	bool isOutput();
+    int type() const { return Type; }
+
+    void setState( int state );
+
+    const int& state() const;
+
+    void setDirection( Direction direction );
+
+    const Direction& direction() const;
+
+    Variable* variable();
+
+    QString value() const;
+
     QVector< Connection* >& connections();
-    void setPortFlags( int );
-
-	const QString& portName() const { return name; }
-	int portFlags() const { return m_portFlags; }
-
-	int type() const { return Type; }
-
-    Node* node() const;
-
-	quint64 ptr();
-    void setPtr( quint64 );
 
     bool isConnected( Port* );
+
+    void mouseDoubleClickEvent( QGraphicsSceneMouseEvent* event );
+
+    void update();
 
 protected:
 
     QVariant itemChange( GraphicsItemChange change, const QVariant &value );
 
-private:
-
-    Node* m_node;
-	QString name;
-	bool isOutput_;
-    QGraphicsTextItem* label;
-	int radius_;
-	int margin;
+    Direction m_direction;
     QVector< Connection* > m_connections;
-	int m_portFlags;
-	quint64 m_ptr;
+    int m_state;
+    PortValue* m_valueText;
 
 };
 

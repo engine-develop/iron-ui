@@ -1,5 +1,5 @@
-#ifndef IRUI_NODE_HPP
-#define IRUI_NODE_HPP
+#ifndef IRUI_SKETCH_HPP
+#define IRUI_SKETCH_HPP
 
 // Copyright (C) 2015 Engine Development
 //
@@ -26,71 +26,50 @@
 //
 
 // Qt
-#include <QGraphicsPathItem>
-
-// Engine
-#include "types.hpp"
+#include <QTabWidget>
 
 //------------------------------------------------------------------------------
 //
 
 class Graph;
-class Variable;
-class Port;
 
 //------------------------------------------------------------------------------
 //
 
-class Node
-    : public QGraphicsPathItem
+class Sketch
+    : public QTabWidget
 {
+    Q_OBJECT
 
 public:
 
-	enum { Type = QGraphicsItem::UserType + 3 };
+    Sketch( QWidget* parent = 0x0 );
 
-    Node( QGraphicsItem* parent = 0 );
+    ~Sketch();
 
-    ~Node();
+    void clear();
 
-    int type() const;
+    Graph* setupGraph();
 
-    void setId( const uint32_t& id );
+    Graph* loopGraph();
 
-    const uint32_t& id() const;
+private:
 
-    void setTypeId( const uint32_t& typeId );
-
-    const uint32_t& typeId() const;
-
-    void setName( const QString& name );
-
-    QString name() const;
-
-    double codePos() const;
-
-    Variable* addAttribute( const uint32_t& typeId,
-                            const QString& name,
-                            Direction direction );
-
-    QList< Variable* > attributes() const;
-
-    void paint( QPainter* painter,
-                const QStyleOptionGraphicsItem* option,
-                QWidget* widget );
-
-    void update();
-
-protected:
-
-    QVariant itemChange( GraphicsItemChange change,
-                         const QVariant &value );
-
-    uint32_t m_id;
-    uint32_t m_typeId;
-    QGraphicsTextItem* m_nameText;
-    QGraphicsPathItem* m_codeAnchor;
+    Graph* m_setupGraph;
+    Graph* m_loopGraph;
 
 };
 
-#endif // IRUI_NODE_HPP
+//------------------------------------------------------------------------------
+//
+
+bool write( Sketch* sketch,
+            const std::string& path );
+
+//------------------------------------------------------------------------------
+//
+
+bool read( const std::string& path,
+           Sketch* sketch );
+
+#endif // IRUI_SKETCH_HPP

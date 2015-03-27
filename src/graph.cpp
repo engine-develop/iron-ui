@@ -9,8 +9,10 @@
 #include <QGraphicsSceneMouseEvent>
 #include <QScrollBar>
 
+#include "utility.hpp"
 #include "port.hpp"
 #include "connection.hpp"
+#include "variable.hpp"
 #include "node.hpp"
 #include "typestore.hpp"
 
@@ -21,9 +23,25 @@
 
 GraphScene::GraphScene( QObject *parent )
     : QGraphicsScene( parent )
+    , m_graph( 0x0 )
 {
-    //setBackgroundBrush( QBrush( QColor( 89, 86, 82 ) ) );
     setBackgroundBrush( QImage( ":/images/resources/images/scene_bkg_tile.png" ) );
+}
+
+//------------------------------------------------------------------------------
+//
+
+void GraphScene::setGraph( Graph* graph )
+{
+    m_graph = graph;
+}
+
+//------------------------------------------------------------------------------
+//
+
+Graph* GraphScene::graph() const
+{
+    return m_graph;
 }
 
 //------------------------------------------------------------------------------
@@ -68,33 +86,8 @@ void GraphScene::keyPressEvent( QKeyEvent* event )
     {
         removeSelected();
     }
-}
 
-//------------------------------------------------------------------------------
-//
-
-void GraphScene::removeNode( QGraphicsItem* item )
-{
-    if ( !item ) return;
-
-    Node* n = static_cast< Node* >( item );
-
-    QVector< Port* > ports = n->ports();
-
-    for ( int j = 0; j < ports.size(); ++j )
-    {
-        QVector< Connection* >& connections = ports[ j ]->connections();
-
-        for ( int k = 0; k < connections.size(); ++k )
-        {
-            if ( connections[ k ] && connections[ k ]->scene() )
-            {
-                removeItem( connections[ k ] );
-            }
-        }
-    }
-
-    removeItem( item );
+    QGraphicsScene::keyPressEvent( event );
 }
 
 //------------------------------------------------------------------------------
@@ -106,15 +99,7 @@ void GraphScene::removeSelected()
 
     for ( int i = 0; i < items.size(); ++i )
     {
-        if ( items[ i ]->type() == Node::Type )
-        {
-            removeNode( items[ i ] );
-        }
-
-        else
-        {
-            removeItem( items[ i ] );
-        }
+        m_graph->removeComponent( items[ i ] );
     }
 }
 
@@ -123,11 +108,28 @@ void GraphScene::removeSelected()
 
 GraphView::GraphView( QGraphicsScene* scene, QWidget* parent )
     : QGraphicsView( scene, parent )
+    , m_graph( 0x0 )
 {
     setRenderHint( QPainter::Antialiasing, true );
     setRenderHint( QPainter::SmoothPixmapTransform, true );
     setDragMode( QGraphicsView::RubberBandDrag );
     setAcceptDrops( true );
+}
+
+//------------------------------------------------------------------------------
+//
+
+void GraphView::setGraph( Graph* graph )
+{
+    m_graph = graph;
+}
+
+//------------------------------------------------------------------------------
+//
+
+Graph* GraphView::graph() const
+{
+    return m_graph;
 }
 
 //------------------------------------------------------------------------------
@@ -168,12 +170,13 @@ void GraphView::dropEvent( QDropEvent* event )
 
     if ( typeDataList[ 0 ] == "variable" )
     {
-        //Variable* v = TypeStoreView::createVariable( scene(), typeDataList[ 1 ].toUInt() );
+        Variable* v = m_graph->createVariable( typeDataList[ 1 ].toUInt() );
+        v->setPos( mapToScene( event->pos() ) );
     }
 
     else if ( typeDataList[ 0 ] == "node" )
     {
-        Node* n = TypeStoreView::createNode( scene(), typeDataList[ 1 ].toUInt() );
+        Node* n = m_graph->createNode( typeDataList[ 1 ].toUInt() );
         n->setPos( mapToScene( event->pos() ) );
     }
 
@@ -272,42 +275,294 @@ void GraphView::mouseMoveEvent( QMouseEvent* event )
 //------------------------------------------------------------------------------
 //
 
-Graph::Graph( QObject *parent )
+Graph::Graph( Type type,
+              QWidget* parent )
     : QObject( parent )
-    , scene( 0x0 )
-    , view( 0x0 )
-    , conn( 0x0 )
+    , m_type( type )
+    , m_scene( 0x0 )
+    , m_view( 0x0 )
+    , m_conn( 0x0 )
+    , m_components()
 {
+    // Create graphics scene
+    //
+    m_scene = new GraphScene( this );
+    m_scene->setGraph( this );
+    m_scene->installEventFilter( this );
+
+    // Create graphics view
+    //
+    m_view = new GraphView( (QGraphicsScene*) m_scene, parent );
+    m_view->setGraph( this );
 }
 
 //------------------------------------------------------------------------------
 //
 
-void Graph::install( GraphScene* s )
+const Graph::Type& Graph::type() const
 {
-    s->installEventFilter( this );
-	scene = s;
+    return m_type;
+}
 
-    QList< QGraphicsView* > views = scene->views();
+//------------------------------------------------------------------------------
+//
 
-    if ( !views.empty() )
+GraphScene* Graph::scene()
+{
+    return m_scene;
+}
+
+//------------------------------------------------------------------------------
+//
+
+GraphView* Graph::view()
+{
+    return m_view;
+}
+
+//------------------------------------------------------------------------------
+//
+
+void Graph::clear()
+{
+    m_scene->clear();
+    m_components.clear();
+}
+
+//------------------------------------------------------------------------------
+//
+
+uint32_t Graph::getComponentId()
+{
+    uint32_t id = 0;
+
+    do
     {
-        view = static_cast< GraphView* >( views[ 0 ] );
+        id = randRange( 0u, uint32_t( -1 ) - 1 );
+    }
+
+    while ( m_components.count( id ) );
+
+    return id;
+}
+
+//------------------------------------------------------------------------------
+//
+
+void Graph::addComponent( QGraphicsItem* component )
+{
+    m_scene->addItem( component );
+
+    uint32_t id = getComponentId();
+
+    switch ( component->type() )
+    {
+        case Variable::Type:
+        {
+            Variable* v = static_cast< Variable* >( component );
+            v->setId( id );
+            break;
+        }
+
+        case Node::Type:
+        {
+            Node* n = static_cast< Node* >( component );
+            n->setId( id );
+            break;
+        }
+
+        default:
+            break;
+    }
+
+    m_components[ id ] = component;
+}
+
+//------------------------------------------------------------------------------
+//
+
+void Graph::addComponents( QList< QGraphicsItem* >& components )
+{
+    foreach( QGraphicsItem* component, components )
+    {
+        addComponent( component );
     }
 }
 
 //------------------------------------------------------------------------------
 //
 
-QGraphicsItem* Graph::itemAt( const QPointF &pos )
+void Graph::removeComponent( QGraphicsItem* component )
 {
-    QList< QGraphicsItem* > items = scene->items( QRectF( pos - QPointF( 1, 1 ), QSize( 3, 3 ) ) );
+    uint32_t id = 0;
 
-    foreach( QGraphicsItem *item, items )
+    switch ( component->type() )
+    {
+        case Variable::Type:
+        {
+            Variable* v = static_cast< Variable* >( component );
+            id = v->id();
+
+            QVector< Connection* >& connections
+                = v->port()->connections();
+
+            for ( int i = 0; i < connections.size(); ++i )
+            {
+                if ( connections[ i ] && connections[ i ]->scene() )
+                {
+                    m_scene->removeItem( connections[ i ] );
+                }
+            }
+
+            break;
+        }
+
+        case Node::Type:
+        {
+            Node* n = static_cast< Node* >( component );
+            id = n->id();
+
+            QList< Variable* > attributes = n->attributes();
+
+            for ( int i = 0; i < attributes.size(); ++i )
+            {
+                QVector< Connection* >& connections
+                    = attributes[ i ]->port()->connections();
+
+                for ( int j = 0; j < connections.size(); ++j )
+                {
+                    if ( connections[ j ] && connections[ j ]->scene() )
+                    {
+                        m_scene->removeItem( connections[ j ] );
+                    }
+                }
+            }
+
+            break;
+        }
+
+        default:
+        {
+            break;
+        }
+    }
+
+    m_scene->removeItem( component );
+
+    m_components.erase( id );
+}
+
+//------------------------------------------------------------------------------
+//
+
+void Graph::removeComponents( QList< QGraphicsItem* >& components )
+{
+    foreach( QGraphicsItem* component, components )
+    {
+        removeComponent( component );
+    }
+}
+
+//------------------------------------------------------------------------------
+//
+
+QList< QGraphicsItem* > Graph::components() const
+{
+    QList< QGraphicsItem* > items = m_scene->items();
+    QList< QGraphicsItem* > components;
+
+    foreach( QGraphicsItem* item, items )
+    {
         if ( item->type() > QGraphicsItem::UserType )
-			return item;
+        {
+            components.append( item );
+        }
+    }
 
-	return 0;
+    return components;
+}
+
+//------------------------------------------------------------------------------
+//
+
+QList< QGraphicsItem* > Graph::componentsByType( const int& type ) const
+{
+    QList< QGraphicsItem* > items = m_scene->items();
+    QList< QGraphicsItem* > components;
+
+    foreach( QGraphicsItem* item, items )
+    {
+        if ( item->type() == type )
+        {
+            components.append( item );
+        }
+    }
+
+    return components;
+}
+
+//------------------------------------------------------------------------------
+//
+
+QGraphicsItem* Graph::component( const uint32_t& id )
+{
+    if ( !m_components.count( id ) ) return 0x0;
+
+    return m_components[ id ];
+}
+
+//------------------------------------------------------------------------------
+//
+
+Variable* Graph::createVariable( const uint32_t& typeId )
+{
+    return TypeStore::createVariable( this, typeId );
+}
+
+//------------------------------------------------------------------------------
+//
+
+Node* Graph::createNode( const uint32_t& typeId )
+{
+    return TypeStore::createNode( this, typeId );
+}
+
+//------------------------------------------------------------------------------
+//
+
+Variable* Graph::addAttribute( Node* node,
+                               const uint32_t& typeId,
+                               const QString& name,
+                               Direction direction )
+{
+    Variable* variable = createVariable( typeId );
+    variable->setParentItem( node );
+    variable->setFlag( QGraphicsItem::ItemIsMovable, false );
+    variable->setFlag( QGraphicsItem::ItemIsSelectable, false );
+    variable->setName( name );
+    variable->setDirection( direction );
+
+    node->update();
+
+    return variable;
+}
+
+//------------------------------------------------------------------------------
+//
+
+QGraphicsItem* Graph::itemAt( const QPointF& pos )
+{
+    QList< QGraphicsItem* > items = m_scene->items( QRectF( pos - QPointF( 1, 1 ), QSize( 3, 3 ) ) );
+
+    foreach( QGraphicsItem* item, items )
+    {
+        if ( item->type() > QGraphicsItem::UserType )
+        {
+            return item;
+        }
+    }
+
+    return 0x0;
 }
 
 //------------------------------------------------------------------------------
@@ -325,33 +580,22 @@ bool Graph::eventFilter( QObject* o, QEvent* e )
             {
                 case Qt::LeftButton:
                 {
-                    QGraphicsItem *item = itemAt( me->scenePos() );
+                    QGraphicsItem* item = itemAt( me->scenePos() );
 
                     if ( item && item->type() == Port::Type )
                     {
-                        view->setDragMode( QGraphicsView::NoDrag );
+                        m_view->setDragMode( QGraphicsView::NoDrag );
 
-                        conn = new Connection( 0 );
-                        scene->addItem( conn );
-                        conn->setPort1( (Port*) item );
-                        conn->setPos1( item->scenePos() );
-                        conn->setPos2( me->scenePos() );
-                        conn->updatePath();
+                        m_conn = new Connection( 0x0 );
+                        m_scene->addItem( m_conn );
+                        m_conn->setPort1( static_cast< Port* >( item ) );
+                        m_conn->setPos1( item->scenePos() );
+                        m_conn->setPos2( me->scenePos() );
+                        m_conn->update();
 
                         return true;
                     }
 
-                    else if ( item && item->type() == Node::Type )
-                    {
-                    }
-
-                    break;
-                }
-
-                case Qt::RightButton:
-                {
-                    // TODO: context menu
-                    //
                     break;
                 }
             }
@@ -359,10 +603,10 @@ bool Graph::eventFilter( QObject* o, QEvent* e )
 
         case QEvent::GraphicsSceneMouseMove:
         {
-            if ( conn )
+            if ( m_conn )
             {
-                conn->setPos2( me->scenePos() );
-                conn->updatePath();
+                m_conn->setPos2( me->scenePos() );
+                m_conn->update();
 
                 return true;
             }
@@ -372,30 +616,32 @@ bool Graph::eventFilter( QObject* o, QEvent* e )
 
         case QEvent::GraphicsSceneMouseRelease:
         {
-            if ( conn && me->button() == Qt::LeftButton )
+            if ( m_conn && me->button() == Qt::LeftButton )
             {
-                view->setDragMode( QGraphicsView::RubberBandDrag );
+                m_view->setDragMode( QGraphicsView::RubberBandDrag );
 
-                QGraphicsItem *item = itemAt( me->scenePos() );
+                QGraphicsItem* item = itemAt( me->scenePos() );
 
                 if ( item && item->type() == Port::Type )
                 {
-                    Port *port1 = conn->port1();
-                    Port *port2 = (Port*) item;
+                    Port* port1 = m_conn->port1();
+                    Port* port2 = static_cast< Port* >( item );
 
-                    if ( port1->node() != port2->node() && port1->isOutput() != port2->isOutput() && !port1->isConnected( port2 ) )
+                    if ( port1->variable()->node() != port2->variable()->node()
+                         && port1->direction() != port2->direction()
+                         && !port1->isConnected( port2 ) )
                     {
-                        conn->setPos2( port2->scenePos() );
-                        conn->setPort2( port2 );
-                        conn->updatePath();
-                        conn = 0x0;
+                        m_conn->setPos2( port2->scenePos() );
+                        m_conn->setPort2( port2 );
+                        m_conn->update();
+                        m_conn = 0x0;
 
                         return true;
                     }
                 }
 
-                delete conn;
-                conn = 0x0;
+                delete m_conn;
+                m_conn = 0x0;
 
                 return true;
             }
@@ -405,51 +651,4 @@ bool Graph::eventFilter( QObject* o, QEvent* e )
 	}
 
     return QObject::eventFilter( o, e );
-}
-
-//------------------------------------------------------------------------------
-//
-
-void Graph::save( QDataStream &ds )
-{
-    foreach( QGraphicsItem *item, scene->items() )
-        if ( item->type() == Node::Type )
-		{
-			ds << item->type();
-            ( (Node*) item )->save( ds );
-		}
-
-    foreach( QGraphicsItem *item, scene->items() )
-        if ( item->type() == Connection::Type )
-		{
-			ds << item->type();
-            ( (Connection*) item )->save( ds );
-		}
-}
-
-//------------------------------------------------------------------------------
-//
-
-void Graph::load( QDataStream &ds )
-{
-	scene->clear();
-
-    QMap< quint64, Port* > portMap;
-
-    while ( !ds.atEnd() )
-	{
-		int type;
-		ds >> type;
-        if ( type == Node::Type )
-		{
-            Node *node = new Node( 0 );
-            scene->addItem( node );
-            node->load( ds, portMap );
-        } else if ( type == Connection::Type )
-		{
-            Connection *conn = new Connection( 0 );
-            scene->addItem( conn );
-            conn->load( ds, portMap );
-		}
-	}
 }

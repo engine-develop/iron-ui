@@ -10,8 +10,10 @@
 // Engine
 #include <iron.hpp>
 
-#include "node.hpp"
+#include "variable.hpp"
 #include "port.hpp"
+#include "node.hpp"
+#include "graph.hpp"
 
 #include "typestore.hpp"
 
@@ -56,7 +58,7 @@ QMimeData* TypeStoreTypesList::mimeData( const QList< QListWidgetItem* > items )
 //------------------------------------------------------------------------------
 //
 
-TypeStoreView::TypeStoreView( QWidget* parent )
+TypeStore::TypeStore( QWidget* parent )
     : QTabWidget( parent )
 {
     reload();
@@ -65,7 +67,7 @@ TypeStoreView::TypeStoreView( QWidget* parent )
 //------------------------------------------------------------------------------
 //
 
-void TypeStoreView::reload()
+void TypeStore::reload()
 {
     clear();
     addCategoryTabs();
@@ -75,12 +77,9 @@ void TypeStoreView::reload()
 //
 
 template< int T >
-TypeStoreTypesList* TypeStoreView::createTab( const std::string& category )
+TypeStoreTypesList* TypeStore::createTab( const std::string& category )
 {
     TypeStoreTypesList* list = new TypeStoreTypesList( engine::Types( T ), this );
-    //list->setViewMode( QListView::ListMode );
-    //list->setUniformItemSizes( true );
-    //list->setGridSize( QSize( 70, 32 ) );
     list->setFlow( QListView::LeftToRight );
     list->setWrapping( true );
     list->setSelectionMode( QAbstractItemView::SingleSelection );
@@ -95,7 +94,7 @@ TypeStoreTypesList* TypeStoreView::createTab( const std::string& category )
 //
 
 template< int T >
-void TypeStoreView::addCategoryTab( const std::string& category )
+void TypeStore::addCategoryTab( const std::string& category )
 {
     typedef engine::TypeStore< T > typestore_t;
     typedef engine::Type< T > type_t;
@@ -112,7 +111,7 @@ void TypeStoreView::addCategoryTab( const std::string& category )
     for ( auto it = types.begin(); it != types.end(); ++it )
     {
         QListWidgetItem* item
-            = new QListWidgetItem( QIcon( ":/icons/resources/icons/node.png" ),
+            = new QListWidgetItem( QIcon( TTypeStoreTypesListItem< T >::icon() ),
                                    QString( (*it)->name.c_str() ) );
         item->setData( Qt::UserRole + 1, QVariant( (*it)->id ) );
         item->setToolTip( QString::fromStdString( (*it)->description ) );
@@ -125,7 +124,7 @@ void TypeStoreView::addCategoryTab( const std::string& category )
 //
 
 template< int T >
-void TypeStoreView::addCategoryTabsType()
+void TypeStore::addCategoryTabsType()
 {
     // Create node category tabs
     //
@@ -142,7 +141,7 @@ void TypeStoreView::addCategoryTabsType()
 //------------------------------------------------------------------------------
 //
 
-void TypeStoreView::addCategoryTabs()
+void TypeStore::addCategoryTabs()
 {
     // Add variable category tabs
     //
@@ -153,55 +152,71 @@ void TypeStoreView::addCategoryTabs()
     addCategoryTabsType< engine::Types_Node >();
 }
 
-////------------------------------------------------------------------------------
-////
+//------------------------------------------------------------------------------
+//
 
-//Variable* TypeStoreView::createVariable( QGraphicsScene* scene,
-//                                         const uint32_t& id )
-//{
-//}
+Variable* TypeStore::createVariable( Graph* graph,
+                                     const uint32_t& typeId )
+{
+    typedef engine::TypeStore< engine::Types_Variable > v_typestore_t;
+    typedef engine::Type< engine::Types_Variable > v_type_t;
+
+    v_type_t* type = v_typestore_t::get().type( typeId );
+    if ( !type ) return 0x0;
+
+    Variable* variable = new Variable( 0x0 );
+    graph->addComponent( variable );
+    variable->setTypeId( type->id );
+    variable->setName( QString::fromStdString( type->name ) );
+    variable->setData( Qt::UserRole + 1, QVariant( type->id ) );
+
+    return variable;
+}
 
 //------------------------------------------------------------------------------
 //
 
-Node* TypeStoreView::createNode( QGraphicsScene* scene,
-                                 const uint32_t& id )
+Node* TypeStore::createNode( Graph* graph,
+                             const uint32_t& typeId )
 {
-    typedef engine::TypeStore< engine::Types_Node > typestore_t;
-    typedef engine::Type< engine::Types_Node > type_t;
+    typedef engine::TypeStore< engine::Types_Variable > v_typestore_t;
+    typedef engine::Type< engine::Types_Variable > v_type_t;
 
-    if ( !scene ) return 0x0;
+    typedef engine::TypeStore< engine::Types_Node > n_typestore_t;
+    typedef engine::Type< engine::Types_Node > n_type_t;
 
-    type_t* type = typestore_t::get().type( id );
+    n_type_t* type = n_typestore_t::get().type( typeId );
     if ( !type ) return 0x0;
 
-    Node* n = new Node( 0x0 );
-    scene->addItem( n );
-    n->setData( Qt::UserRole + 1, QVariant( type->id ) );
+    Node* node = new Node( 0x0 );
+    graph->addComponent( node );
+    node->setTypeId( type->id );
+    node->setName( QString::fromStdString( type->name ) );
+    node->setData( Qt::UserRole + 1, QVariant( type->id ) );
 
-    // Add name port
-    //
-    Port* port = 0x0;
-    port = n->addPort( QString::fromStdString( type->name ), false, Port::NamePort );
-
-    // Add attribute ports
+    // Add attributes
     //
     for ( auto it = type->attributes.begin();
           it != type->attributes.end(); ++it )
     {
+        std::vector< v_type_t* > types
+            = v_typestore_t::get().typesByName( (*it).variable );
+
+        if ( types.empty() ) continue;
+
         QString name = QString::fromStdString( (*it).name );
 
         if ( (*it).type == "Input"
           || (*it).type == "Internal" )
         {
-            port = n->addPort( name, false );
+            graph->addAttribute( node, types[ 0 ]->id, name, Input );
         }
 
         else if ( (*it).type == "Output" )
         {
-            port = n->addPort( name, true );
+            graph->addAttribute( node, types[ 0 ]->id, name, Output );
         }
     }
 
-    return n;
+    return node;
 }

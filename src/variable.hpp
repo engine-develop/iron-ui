@@ -1,5 +1,5 @@
-#ifndef IRUI_NODE_HPP
-#define IRUI_NODE_HPP
+#ifndef IRUI_VARIABLE_HPP
+#define IRUI_VARIABLE_HPP
 
 // Copyright (C) 2015 Engine Development
 //
@@ -35,23 +35,23 @@
 //
 
 class Graph;
-class Variable;
 class Port;
+class Node;
 
 //------------------------------------------------------------------------------
 //
 
-class Node
+class Variable
     : public QGraphicsPathItem
 {
 
 public:
 
-	enum { Type = QGraphicsItem::UserType + 3 };
+    enum { Type = QGraphicsItem::UserType + 4 };
 
-    Node( QGraphicsItem* parent = 0 );
+    Variable( QGraphicsItem* parent = 0x0 );
 
-    ~Node();
+    ~Variable();
 
     int type() const;
 
@@ -63,17 +63,19 @@ public:
 
     const uint32_t& typeId() const;
 
+    Port* port();
+
+    Node* node();
+
+    void setDirection( const Direction& direction );
+
+    const Direction& direction() const;
+
     void setName( const QString& name );
 
     QString name() const;
 
     double codePos() const;
-
-    Variable* addAttribute( const uint32_t& typeId,
-                            const QString& name,
-                            Direction direction );
-
-    QList< Variable* > attributes() const;
 
     void paint( QPainter* painter,
                 const QStyleOptionGraphicsItem* option,
@@ -83,14 +85,13 @@ public:
 
 protected:
 
-    QVariant itemChange( GraphicsItemChange change,
-                         const QVariant &value );
-
     uint32_t m_id;
     uint32_t m_typeId;
-    QGraphicsTextItem* m_nameText;
+    Direction m_direction;
+    QGraphicsTextItem* m_label;
     QGraphicsPathItem* m_codeAnchor;
+    Port* m_port;
 
 };
 
-#endif // IRUI_NODE_HPP
+#endif // IRUI_VARIABLE_HPP

@@ -25,6 +25,7 @@
 //------------------------------------------------------------------------------
 //
 
+// Qt
 #include <QGraphicsPathItem>
 
 //------------------------------------------------------------------------------
@@ -43,28 +44,33 @@ public:
 
 	enum { Type = QGraphicsItem::UserType + 2 };
 
-    Connection( QGraphicsItem *parent = 0 );
+    Connection( QGraphicsItem* parent = 0 );
+
     ~Connection();
 
-    void setPos1( const QPointF &p );
-    void setPos2( const QPointF &p );
-    void setPort1( Port *p );
-    void setPort2( Port *p );
-	void updatePosFromPorts();
-	void updatePath();
+    int type() const;
+
+    void setPos1( const QPointF& p );
+
+    void setPos2( const QPointF& p );
+
+    void setPort1( Port* p );
+
+    void setPort2( Port* p );
+
     Port* port1() const;
+
     Port* port2() const;
 
-    void save( QDataStream& );
-    void load( QDataStream&, const QMap< quint64, Port* > &portMap );
+    void updatePosFromPorts();
 
-	int type() const { return Type; }
+    void update();
 
 private:
 
-    QColor color;
-	QPointF pos1;
-	QPointF pos2;
+    QColor m_color;
+    QPointF m_pos1;
+    QPointF m_pos2;
     Port* m_port1;
     Port* m_port2;
 

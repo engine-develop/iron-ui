@@ -14,8 +14,31 @@
 //------------------------------------------------------------------------------
 //
 
+class Variable;
 class Node;
+class Graph;
 class QGraphicsScene;
+
+//------------------------------------------------------------------------------
+//
+
+template< int T >
+struct TTypeStoreTypesListItem
+{
+    static EN_INLINE QString icon() { return ""; }
+};
+
+template<>
+struct TTypeStoreTypesListItem< engine::Types_Variable >
+{
+    static EN_INLINE QString icon() { return ":/icons/resources/icons/variable.png"; }
+};
+
+template<>
+struct TTypeStoreTypesListItem< engine::Types_Node >
+{
+    static EN_INLINE QString icon() { return ":/icons/resources/icons/node.png"; }
+};
 
 //------------------------------------------------------------------------------
 //
@@ -23,7 +46,6 @@ class QGraphicsScene;
 class TypeStoreTypesList
     : public QListWidget
 {
-    Q_OBJECT
 
 public:
 
@@ -43,20 +65,20 @@ protected:
 //------------------------------------------------------------------------------
 //
 
-class TypeStoreView
+class TypeStore
     : public QTabWidget
 {
     Q_OBJECT
 
 public:
 
-    explicit TypeStoreView( QWidget* parent = 0x0 );
+    TypeStore( QWidget* parent = 0x0 );
 
-//    static Variable* createVariable( QGraphicsScene* scene,
-//                                     const uint32_t& id );
+    static Variable* createVariable( Graph* graph,
+                                     const uint32_t& typeId );
 
-    static Node* createNode( QGraphicsScene* scene,
-                             const uint32_t& id );
+    static Node* createNode( Graph* graph,
+                             const uint32_t& typeId );
 
 public slots:
 

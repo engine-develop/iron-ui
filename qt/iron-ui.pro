@@ -12,7 +12,9 @@ TEMPLATE = app
 
 INCLUDEPATH += ../../../iron/ext/chaos-pp-master
 INCLUDEPATH += ../../../iron/build/iron/include
+INCLUDEPATH += ../../../ext/tinyxml2/build/tinyxml2/include
 LIBS += -L../../../iron/build/iron/lib -liron
+LIBS += -L../../../ext/tinyxml2/build/tinyxml2/lib -ltinyxml2
 
 win32 {
     LIBS += -lsetupapi
@@ -27,7 +29,9 @@ SOURCES += \
     ../src/port.cpp \
     ../src/typestore.cpp \
     ../src/node.cpp \
-    ../src/graph.cpp
+    ../src/graph.cpp \
+    ../src/variable.cpp \
+    ../src/sketch.cpp
 
 HEADERS += \
     ../src/connection.hpp \
@@ -36,7 +40,9 @@ HEADERS += \
     ../src/typestore.hpp \
     ../src/node.hpp \
     ../src/graph.hpp \
-    ../src/utility.hpp
+    ../src/utility.hpp \
+    ../src/variable.hpp \
+    ../src/sketch.hpp
 
 FORMS +=
 

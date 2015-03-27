@@ -30,7 +30,8 @@
 //
 
 template< class T >
-EN_INLINE T randRange( T low, T high )
+EN_INLINE T randRange( T low,
+                       T high )
 {
     // Random number between low and high
     return qrand() % ( ( high + 1 ) - low ) + low;

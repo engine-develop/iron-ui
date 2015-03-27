@@ -1,5 +1,5 @@
-#ifndef IRUI_MAINWINDOW_HPP
-#define IRUI_MAINWINDOW_HPP
+#ifndef IRUI_TYPES_HPP
+#define IRUI_TYPES_HPP
 
 // Copyright (C) 2015 Engine Development
 //
@@ -25,45 +25,10 @@
 //------------------------------------------------------------------------------
 //
 
-// Qt
-#include <QMainWindow>
-
-//------------------------------------------------------------------------------
-//
-
-class Sketch;
-class TypeStore;
-
-//------------------------------------------------------------------------------
-//
-
-class MainWindow
-    : public QMainWindow
+enum Direction
 {
-	Q_OBJECT
-
-public:
-
-    explicit MainWindow( QWidget* parent = 0 );
-
-    ~MainWindow();
-
-private slots:
-
-    bool newFile();
-
-    bool openFile();
-
-    bool saveFile();
-
-    bool closeFile();
-
-private:
-
-    QMenu* m_fileMenu;
-    Sketch* m_sketch;
-    TypeStore* m_typeStore;
-
+    Input  = 0,
+    Output = 1
 };
 
-#endif // IRUI_MAINWINDOW_HPP
+#endif // IRUI_TYPES_HPP
