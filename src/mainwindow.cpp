@@ -21,11 +21,11 @@
 MainWindow::MainWindow( QWidget* parent )
     : QMainWindow( parent )
 {
-    // Set window title, geometry
+    // Set window geometry
     //
-    QString windowTitle = "Iron " IRON_API_VERSION_S;
-    setWindowTitle( windowTitle );
     resize( 1000, 700 );
+
+    m_fileName.clear();
 
     // Create sketch
     //
@@ -65,6 +65,11 @@ MainWindow::MainWindow( QWidget* parent )
     saveAct->setStatusTip( tr( "Save a file" ) );
     connect( saveAct, SIGNAL( triggered() ), this, SLOT( saveFile() ) );
 
+    QAction* saveAsAct = new QAction( tr( "&Save As" ), this );
+    saveAsAct->setShortcuts( QKeySequence::SaveAs );
+    saveAsAct->setStatusTip( tr( "Save as a file" ) );
+    connect( saveAsAct, SIGNAL( triggered() ), this, SLOT( saveAsFile() ) );
+
     QAction* closeAct = new QAction( tr( "&Close" ), this );
     closeAct->setShortcuts( QKeySequence::Close );
     closeAct->setStatusTip( tr( "Save a file" ) );
@@ -81,6 +86,7 @@ MainWindow::MainWindow( QWidget* parent )
     m_fileMenu->addAction( newAct );
     m_fileMenu->addAction( openAct );
     m_fileMenu->addAction( saveAct );
+    m_fileMenu->addAction( saveAsAct );
     m_fileMenu->addAction( closeAct );
     m_fileMenu->addSeparator();
     m_fileMenu->addAction( quitAct );
@@ -135,6 +141,7 @@ MainWindow::MainWindow( QWidget* parent )
                          "}"
                     );
 
+    updateWindowTitle();
 }
 
 //------------------------------------------------------------------------------
@@ -142,6 +149,22 @@ MainWindow::MainWindow( QWidget* parent )
 
 MainWindow::~MainWindow()
 {
+}
+
+//------------------------------------------------------------------------------
+//
+
+void MainWindow::updateWindowTitle()
+{
+    QString windowTitle = "Iron " IRON_API_VERSION_S;
+
+    if ( !m_fileName.isEmpty() )
+    {
+        windowTitle += "  -  ";
+        windowTitle += m_fileName;
+    }
+
+    setWindowTitle( windowTitle );
 }
 
 //------------------------------------------------------------------------------
@@ -167,13 +190,47 @@ bool MainWindow::openFile()
         return false;
     }
 
-    return read( fileName.toStdString(), m_sketch );
+    if ( read( fileName.toStdString(), m_sketch ) )
+    {
+        m_fileName = fileName;
+        updateWindowTitle();
+
+        return true;
+    }
+
+    return false;
 }
 
 //------------------------------------------------------------------------------
 //
 
 bool MainWindow::saveFile()
+{
+    if ( m_fileName.isEmpty() )
+    {
+        QString fileName = QFileDialog::getSaveFileName( this );
+
+        if ( fileName.isEmpty() )
+        {
+            return false;
+        }
+
+        if ( !fileName.endsWith( ".xml" ) )
+        {
+            fileName.append( ".xml" );
+        }
+
+        m_fileName = fileName;
+        updateWindowTitle();
+    }
+
+    return write( m_sketch, m_fileName.toStdString() );
+}
+
+//------------------------------------------------------------------------------
+//
+
+bool MainWindow::saveAsFile()
 {
     QString fileName = QFileDialog::getSaveFileName( this );
 
@@ -182,7 +239,20 @@ bool MainWindow::saveFile()
         return false;
     }
 
-    return write( m_sketch, fileName.toStdString() );
+    if ( !fileName.endsWith( ".xml" ) )
+    {
+        fileName.append( ".xml" );
+    }
+
+    if ( write( m_sketch, fileName.toStdString() ) )
+    {
+        m_fileName = fileName;
+        updateWindowTitle();
+
+        return true;
+    }
+
+    return false;
 }
 
 //------------------------------------------------------------------------------
@@ -190,7 +260,9 @@ bool MainWindow::saveFile()
 
 bool MainWindow::closeFile()
 {
+    m_fileName.clear();
     m_sketch->clear();
+    updateWindowTitle();
 
     return true;
 }

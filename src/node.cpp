@@ -136,8 +136,37 @@ QList< Variable* > Node::attributes() const
 //------------------------------------------------------------------------------
 //
 
+Variable* Node::attribute( const uint8_t& id ) const
+{
+    QList< Variable* > variables = attributes();
+
+    return variables[ id ];
+}
+
+//------------------------------------------------------------------------------
+//
+
+void Node::updateAttributeIds()
+{
+    uint8_t i = 0;
+
+    foreach( QGraphicsItem* child, childItems() )
+    {
+        if ( child->type() == Variable::Type )
+        {
+            Variable* v = static_cast< Variable* >( child );
+            v->setAttributeId( i++ );
+        }
+    }
+}
+
+//------------------------------------------------------------------------------
+//
+
 void Node::update()
 {
+    updateAttributeIds();
+
     int nInputs = 0;
     int nOutputs = 0;
     double wMaxInput = 0;

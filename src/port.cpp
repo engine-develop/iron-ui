@@ -12,6 +12,7 @@
 
 // Engine
 #include "connection.hpp"
+#include "variable.hpp"
 
 #include "port.hpp"
 
@@ -60,14 +61,14 @@ void PortValue::paint( QPainter* p,
 
 Port::Port( QGraphicsItem* parent )
     : QGraphicsPathItem( parent )
-    , m_state( 0 )
+    , m_expanded( false )
 {
     setFlag( QGraphicsItem::ItemSendsScenePositionChanges );
     setPen( Qt::NoPen );
 
     m_valueText = new PortValue( this );
     m_valueText->setTextInteractionFlags( Qt::TextEditorInteraction );
-    m_valueText->setTextWidth( 60 );
+    m_valueText->setTextWidth( 50 );
     m_valueText->setDefaultTextColor( QColor( 0, 0, 0 ) );
     m_valueText->setPlainText( "0" );
 }
@@ -77,7 +78,7 @@ Port::Port( QGraphicsItem* parent )
 
 Port::~Port()
 {
-    foreach( Connection *conn, m_connections )
+    foreach( Connection* conn, m_connections )
     {
 		delete conn;
     }
@@ -86,35 +87,25 @@ Port::~Port()
 //------------------------------------------------------------------------------
 //
 
-void Port::setState( int state )
+int Port::type() const
 {
-    m_state = state;
+    return Type;
 }
 
 //------------------------------------------------------------------------------
 //
 
-const int& Port::state() const
+void Port::setExpanded( bool state )
 {
-    return m_state;
+    m_expanded = state;
 }
 
 //------------------------------------------------------------------------------
 //
 
-void Port::setDirection( Direction direction )
+const bool& Port::expanded() const
 {
-    m_direction = direction;
-
-    update();
-}
-
-//------------------------------------------------------------------------------
-//
-
-const Direction& Port::direction() const
-{
-    return m_direction;
+    return m_expanded;
 }
 
 //------------------------------------------------------------------------------
@@ -123,6 +114,14 @@ const Direction& Port::direction() const
 Variable* Port::variable()
 {
     return (Variable*) parentItem();
+}
+
+//------------------------------------------------------------------------------
+//
+
+void Port::setValue( const QString& value )
+{
+    m_valueText->setPlainText( value );
 }
 
 //------------------------------------------------------------------------------
@@ -162,7 +161,7 @@ bool Port::isConnected( Port* other )
 
 void Port::mouseDoubleClickEvent( QGraphicsSceneMouseEvent* event )
 {
-    m_state ^= Expanded;
+    m_expanded = !m_expanded;
     update();
 
     event->accept();
@@ -191,7 +190,7 @@ QVariant Port::itemChange( GraphicsItemChange change, const QVariant &value )
 void Port::update()
 {    
     static const int widthPad = 5;
-    int widthExpand = ( m_state & Expanded ) ? 70 : 0;
+    int widthExpand = ( m_expanded ) ? 70 : 0;
 
     int pWidth  = parentItem()->boundingRect().width();
     int pHeight = parentItem()->boundingRect().height();
@@ -200,7 +199,7 @@ void Port::update()
     int hOffset = pWidth - widthPad;
     int gradientId = 0;
 
-    if ( m_direction == Input )
+    if ( variable()->direction() == Input )
     {
         hScale = -1;
         hOffset = widthPad;
@@ -208,8 +207,8 @@ void Port::update()
     }
 
     QPolygon poly;
-    poly << QPoint(  (widthPad+widthExpand) * hScale,  pHeight/2 )
-         << QPoint(  (widthPad+widthExpand) * hScale, -(pHeight-1)/2 )
+    poly << QPoint( (widthPad+widthExpand) * hScale,  pHeight/2 )
+         << QPoint( (widthPad+widthExpand) * hScale, -(pHeight-1)/2 )
          << QPoint( -widthPad * hScale, -(pHeight-1)/2 )
          << QPoint(  0,                  0         )
          << QPoint( -widthPad * hScale,  pHeight/2 );
@@ -225,15 +224,15 @@ void Port::update()
     gradient.setColorAt(  gradientId, QColor( 255, 61, 0 ) );
     gradient.setColorAt( !gradientId, QColor( 179, 43, 0 ) );
 
-    if ( m_state & Expanded )
+    if ( m_expanded )
     {
-        if ( m_direction == Input )
+        if ( variable()->direction() == Input )
         {
             gradient.setFinalStop( -10.0, 10.0 );
             m_valueText->setPos( -70, -(pHeight-1)/2 );
         }
 
-        else if ( m_direction == Output )
+        else if ( variable()->direction() == Output )
         {
             gradient.setStart( 10.0, 10.0 );
             m_valueText->setPos( 10, -(pHeight-1)/2 );

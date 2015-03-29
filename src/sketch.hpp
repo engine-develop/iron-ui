@@ -64,7 +64,7 @@ private:
 //
 
 bool write( Sketch* sketch,
-            const std::string& path );
+            std::string path );
 
 //------------------------------------------------------------------------------
 //

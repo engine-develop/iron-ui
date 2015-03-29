@@ -56,11 +56,16 @@ private slots:
 
     bool saveFile();
 
+    bool saveAsFile();
+
     bool closeFile();
 
 private:
 
+    void updateWindowTitle();
+
     QMenu* m_fileMenu;
+    QString m_fileName;
     Sketch* m_sketch;
     TypeStore* m_typeStore;
 

@@ -69,17 +69,17 @@ public:
 
     double codePos() const;
 
-    Variable* addAttribute( const uint32_t& typeId,
-                            const QString& name,
-                            Direction direction );
-
     QList< Variable* > attributes() const;
+
+    Variable* attribute( const uint8_t& id ) const;
+
+    void updateAttributeIds();
+
+    void update();
 
     void paint( QPainter* painter,
                 const QStyleOptionGraphicsItem* option,
                 QWidget* widget );
-
-    void update();
 
 protected:
 

@@ -8,6 +8,8 @@
 #include "graph.hpp"
 #include "variable.hpp"
 #include "node.hpp"
+#include "connection.hpp"
+#include "port.hpp"
 
 #include "sketch.hpp"
 
@@ -68,6 +70,21 @@ Graph* Sketch::loopGraph()
 //------------------------------------------------------------------------------
 //
 
+void writeVariable( tinyxml2::XMLElement* variableElem,
+                    Variable* v )
+{
+    variableElem->SetAttribute( "id", v->id() );
+    variableElem->SetAttribute( "typeId", v->typeId() );
+    variableElem->SetAttribute( "name", v->name().toStdString().c_str() );
+    variableElem->SetAttribute( "scenePosX", v->scenePos().x() );
+    variableElem->SetAttribute( "scenePosY", v->scenePos().y() );
+    variableElem->SetAttribute( "portExpanded", v->port()->expanded() );
+    variableElem->SetAttribute( "portValue", v->port()->value().toStdString().c_str() );
+}
+
+//------------------------------------------------------------------------------
+//
+
 void writeGraph( tinyxml2::XMLDocument* doc,
                  tinyxml2::XMLNode* graphElem,
                  Graph* graph )
@@ -88,48 +105,48 @@ void writeGraph( tinyxml2::XMLDocument* doc,
     //
     tinyxml2::XMLElement* componentsElem = doc->NewElement( "components" );
 
-    QList< QGraphicsItem* > components = graph->components();
+    QList< QGraphicsItem* > variables = graph->componentsByType( Variable::Type );
 
-    foreach( QGraphicsItem* component, components )
+    foreach( QGraphicsItem* variable, variables )
     {
-        switch ( component->type() )
+        Variable* v = static_cast< Variable* >( variable );
+
+        if ( v->node() )
         {
-            case Variable::Type:
-            {
-                Variable* variable = static_cast< Variable* >( component );
-                if ( variable->node() ) break;
-
-                tinyxml2::XMLElement* variableElem = doc->NewElement( "variable" );
-                variableElem->SetAttribute( "typeId", variable->typeId() );
-                variableElem->SetAttribute( "name", variable->name().toStdString().c_str() );
-                variableElem->SetAttribute( "scenePosX", variable->scenePos().x() );
-                variableElem->SetAttribute( "scenePosY", variable->scenePos().y() );
-
-                componentsElem->InsertEndChild( variableElem );
-
-                break;
-            }
-
-            case Node::Type:
-            {
-                Node* node = static_cast< Node* >( component );
-
-                tinyxml2::XMLElement* nodeElem = doc->NewElement( "node" );
-                nodeElem->SetAttribute( "typeId", node->typeId() );
-                nodeElem->SetAttribute( "name", node->name().toStdString().c_str() );
-                nodeElem->SetAttribute( "scenePosX", node->scenePos().x() );
-                nodeElem->SetAttribute( "scenePosY", node->scenePos().y() );
-
-                componentsElem->InsertEndChild( nodeElem );
-
-                break;
-            }
-
-            default:
-            {
-                break;
-            }
+            continue;
         }
+
+        tinyxml2::XMLElement* variableElem = doc->NewElement( "variable" );
+        writeVariable( variableElem, v );
+
+        componentsElem->InsertEndChild( variableElem );
+    }
+
+    QList< QGraphicsItem* > nodes = graph->componentsByType( Node::Type );
+
+    foreach( QGraphicsItem* node, nodes )
+    {
+        Node* n = static_cast< Node* >( node );
+
+        tinyxml2::XMLElement* nodeElem = doc->NewElement( "node" );
+        nodeElem->SetAttribute( "id", n->id() );
+        nodeElem->SetAttribute( "typeId", n->typeId() );
+        nodeElem->SetAttribute( "name", n->name().toStdString().c_str() );
+        nodeElem->SetAttribute( "scenePosX", n->scenePos().x() );
+        nodeElem->SetAttribute( "scenePosY", n->scenePos().y() );
+
+        tinyxml2::XMLElement* attributesElem = doc->NewElement( "attributes" );
+
+        foreach( Variable* attribute, n->attributes() )
+        {
+            tinyxml2::XMLElement* variableElem = doc->NewElement( "variable" );
+            writeVariable( variableElem, attribute );
+            attributesElem->InsertEndChild( variableElem );
+        }
+
+        nodeElem->InsertEndChild( attributesElem );
+
+        componentsElem->InsertEndChild( nodeElem );
     }
 
     graphElem->InsertEndChild( componentsElem );
@@ -137,6 +154,49 @@ void writeGraph( tinyxml2::XMLDocument* doc,
     // Write connections
     //
     tinyxml2::XMLElement* connectionsElem = doc->NewElement( "connections" );
+
+    QList< QGraphicsItem* > connections = graph->componentsByType( Connection::Type );
+
+    foreach( QGraphicsItem* connection, connections )
+    {
+        Connection* c = static_cast< Connection* >( connection );
+
+        tinyxml2::XMLElement* connectionElem = doc->NewElement( "connection" );
+
+        uint32_t port1Id1 = 0;
+        uint32_t port1Id2 = 0;
+        uint32_t port2Id1 = 0;
+        uint32_t port2Id2 = 0;
+
+        if ( c->port1()->variable()->node() )
+        {
+            port1Id1 = c->port1()->variable()->node()->id();
+            port1Id2 = c->port1()->variable()->attributeId();
+        }
+
+        else
+        {
+            port1Id1 = c->port1()->variable()->id();
+        }
+
+        if ( c->port2()->variable()->node() )
+        {
+            port2Id1 = c->port2()->variable()->node()->id();
+            port2Id2 = c->port2()->variable()->attributeId();
+        }
+
+        else
+        {
+            port2Id1 = c->port2()->variable()->id();
+        }
+
+        connectionElem->SetAttribute( "port1Id1", port1Id1 );
+        connectionElem->SetAttribute( "port1Id2", port1Id2 );
+        connectionElem->SetAttribute( "port2Id1", port2Id1 );
+        connectionElem->SetAttribute( "port2Id2", port2Id2 );
+        connectionsElem->InsertEndChild( connectionElem );
+    }
+
     graphElem->InsertEndChild( connectionsElem );
 }
 
@@ -144,7 +204,7 @@ void writeGraph( tinyxml2::XMLDocument* doc,
 //
 
 bool write( Sketch* sketch,
-            const std::string& path )
+            std::string path )
 {
     if ( !sketch || path.empty() ) return false;
 
@@ -170,6 +230,110 @@ bool write( Sketch* sketch,
     delete doc;
 
     return ( status == tinyxml2::XML_SUCCESS );
+}
+
+//------------------------------------------------------------------------------
+//
+
+void readVariable( tinyxml2::XMLElement* variableElem,
+                   Graph* graph,
+                   Variable* variable )
+{
+    uint32_t id = 0;
+    variableElem->QueryUnsignedAttribute( "id", &id );
+    uint32_t typeId = 0;
+    variableElem->QueryUnsignedAttribute( "typeId", &typeId );
+    const char* name = variableElem->Attribute( "name" );
+    int scenePosX = 0;
+    variableElem->QueryIntAttribute( "scenePosX", &scenePosX );
+    int scenePosY = 0;
+    variableElem->QueryIntAttribute( "scenePosY", &scenePosY );
+    bool portExpanded = false;
+    variableElem->QueryBoolAttribute( "portExpanded", &portExpanded );
+    const char* portValue = variableElem->Attribute( "portValue" );
+
+    variable->setName( name );
+
+    // Do not set position if part of Node
+    //
+    if ( !variable->node() )
+    {
+        variable->setPos( scenePosX, scenePosY );
+    }
+
+    variable->port()->setExpanded( portExpanded );
+    variable->port()->setValue( portValue );
+
+    variable->update();
+
+    graph->switchComponentId( variable->id(), id );
+}
+
+//------------------------------------------------------------------------------
+//
+
+void readVariable( tinyxml2::XMLElement* variableElem,
+                   Graph* graph )
+{
+    uint32_t typeId = 0;
+    variableElem->QueryUnsignedAttribute( "typeId", &typeId );
+
+    Variable* variable = graph->createVariable( typeId );
+
+    readVariable( variableElem, graph, variable );
+}
+
+//------------------------------------------------------------------------------
+//
+
+void readNode( tinyxml2::XMLElement* nodeElem,
+               Graph* graph )
+{
+    uint32_t id = 0;
+    nodeElem->QueryUnsignedAttribute( "id", &id );
+    uint32_t typeId = 0;
+    nodeElem->QueryUnsignedAttribute( "typeId", &typeId );
+    const char* name = nodeElem->Attribute( "name" );
+    int scenePosX = 0;
+    nodeElem->QueryIntAttribute( "scenePosX", &scenePosX );
+    int scenePosY = 0;
+    nodeElem->QueryIntAttribute( "scenePosY", &scenePosY );
+
+    Node* node = graph->createNode( typeId );
+    node->setName( name );
+    node->setPos( scenePosX, scenePosY );
+
+    // Read attributes
+    //
+    QList< Variable* > attributes = node->attributes();
+    tinyxml2::XMLElement* attributesElem = nodeElem->FirstChildElement();
+
+    // Count number of attributes
+    //
+    uint8_t numAttributes = 0;
+
+    for ( tinyxml2::XMLElement* child = attributesElem->FirstChildElement();
+          child != 0x0; child = child->NextSiblingElement() )
+    {
+        ++numAttributes;
+    }
+
+    // Check number of attributes match
+    //
+    if ( numAttributes == attributes.size() )
+    {
+        numAttributes = 0;
+
+        for ( tinyxml2::XMLElement* child = attributesElem->FirstChildElement();
+              child != 0x0; child = child->NextSiblingElement() )
+        {
+            readVariable( child, graph, attributes[ numAttributes++ ] );
+        }
+    }
+
+    node->update();
+
+    graph->switchComponentId( node->id(), id );
 }
 
 //------------------------------------------------------------------------------
@@ -206,30 +370,73 @@ void readGraph( tinyxml2::XMLElement* graphElem,
     {
         std::string elemName = child->Name();
 
-        uint32_t typeId = 0;
-        child->QueryUnsignedAttribute( "typeId", &typeId );
-
-        const char* name = child->Attribute( "name" );
-
-        int scenePosX = 0;
-        child->QueryIntAttribute( "scenePosX", &scenePosX );
-
-        int scenePosY = 0;
-        child->QueryIntAttribute( "scenePosY", &scenePosY );
-
         if ( elemName == "variable" )
         {
-            Variable* variable = graph->createVariable( typeId );
-            variable->setName( name );
-            variable->setPos( scenePosX, scenePosY );
+            readVariable( child, graph );
         }
 
         else if ( elemName == "node" )
         {
-            Node* node = graph->createNode( typeId );
-            node->setName( name );
-            node->setPos( scenePosX, scenePosY );
+            readNode( child, graph );
         }
+    }
+
+    // Read connections
+    //
+    tinyxml2::XMLElement* connectionsElem = componentsElem->NextSiblingElement();
+
+    for ( tinyxml2::XMLElement* child = connectionsElem->FirstChildElement();
+          child != 0x0; child = child->NextSiblingElement() )
+    {
+        uint32_t port1Id1 = 0;
+        uint32_t port1Id2 = 0;
+        uint32_t port2Id1 = 0;
+        uint32_t port2Id2 = 0;
+
+        child->QueryUnsignedAttribute( "port1Id1", &port1Id1 );
+        child->QueryUnsignedAttribute( "port1Id2", &port1Id2 );
+        child->QueryUnsignedAttribute( "port2Id1", &port2Id1 );
+        child->QueryUnsignedAttribute( "port2Id2", &port2Id2 );
+
+        QGraphicsItem* component1 = graph->component( port1Id1 );
+        QGraphicsItem* component2 = graph->component( port2Id1 );
+
+        if ( !component1 || !component2 )
+        {
+            continue;
+        }
+
+        Port* port1 = 0x0;
+
+        if ( component1->type() == Variable::Type )
+        {
+            Variable* v = static_cast< Variable* >( component1 );
+            port1 = v->port();
+        }
+
+        else if ( component1->type() == Node::Type )
+        {
+            Node* n = static_cast< Node* >( component1 );
+            Variable* v = n->attribute( port1Id2 );
+            if ( v ) port1 = v->port();
+        }
+
+        Port* port2 = 0x0;
+
+        if ( component2->type() == Variable::Type )
+        {
+            Variable* v = static_cast< Variable* >( component2 );
+            port2 = v->port();
+        }
+
+        else if ( component2->type() == Node::Type )
+        {
+            Node* n = static_cast< Node* >( component2 );
+            Variable* v = n->attribute( port2Id2 );
+            if ( v ) port2 = v->port();
+        }
+
+        graph->createConnection( port1, port2 );
     }
 }
 

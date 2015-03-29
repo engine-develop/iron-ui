@@ -67,6 +67,10 @@ public:
 
     Node* node();
 
+    void setAttributeId( const uint8_t& id );
+
+    const uint8_t& attributeId() const;
+
     void setDirection( const Direction& direction );
 
     const Direction& direction() const;
@@ -87,10 +91,11 @@ protected:
 
     uint32_t m_id;
     uint32_t m_typeId;
-    Direction m_direction;
     QGraphicsTextItem* m_label;
     QGraphicsPathItem* m_codeAnchor;
+    Direction m_direction;
     Port* m_port;
+    uint8_t m_attributeId;
 
 };
 

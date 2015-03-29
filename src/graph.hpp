@@ -165,12 +165,18 @@ public:
 
     QGraphicsItem* component( const uint32_t& id );
 
+    bool switchComponentId( const uint32_t& oldId,
+                            const uint32_t& newId );
+
     //----------
     //
 
     Variable* createVariable( const uint32_t& typeId );
 
     Node* createNode( const uint32_t& typeId );
+
+    Connection* createConnection( Port* port1,
+                                  Port* port2 );
 
     Variable* addAttribute( Node* node,
                             const uint32_t& typeId,

@@ -514,6 +514,26 @@ QGraphicsItem* Graph::component( const uint32_t& id )
 //------------------------------------------------------------------------------
 //
 
+bool Graph::switchComponentId( const uint32_t& oldId,
+                               const uint32_t& newId )
+{
+    if ( !m_components.count( oldId )
+         || m_components.count( newId ) )
+    {
+        return false;
+    }
+
+    QGraphicsItem* component = m_components[ oldId ];
+    m_components.erase( oldId );
+
+    m_components[ newId ] = component;
+
+    return true;
+}
+
+//------------------------------------------------------------------------------
+//
+
 Variable* Graph::createVariable( const uint32_t& typeId )
 {
     return TypeStore::createVariable( this, typeId );
@@ -525,6 +545,23 @@ Variable* Graph::createVariable( const uint32_t& typeId )
 Node* Graph::createNode( const uint32_t& typeId )
 {
     return TypeStore::createNode( this, typeId );
+}
+
+//------------------------------------------------------------------------------
+//
+
+Connection* Graph::createConnection( Port* port1,
+                                     Port* port2 )
+{
+    Connection* c = new Connection( 0x0 );
+    m_scene->addItem( c );
+    c->setPort1( port1 );
+    c->setPos1( port1->scenePos() );
+    c->setPort2( port2 );
+    c->setPos2( port2->scenePos() );
+    c->update();
+
+    return c;
 }
 
 //------------------------------------------------------------------------------
@@ -628,7 +665,7 @@ bool Graph::eventFilter( QObject* o, QEvent* e )
                     Port* port2 = static_cast< Port* >( item );
 
                     if ( port1->variable()->node() != port2->variable()->node()
-                         && port1->direction() != port2->direction()
+                         && port1->variable()->direction() != port2->variable()->direction()
                          && !port1->isConnected( port2 ) )
                     {
                         m_conn->setPos2( port2->scenePos() );

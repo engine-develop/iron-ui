@@ -79,17 +79,15 @@ public:
 
     ~Port();
 
-    int type() const { return Type; }
+    int type() const;
 
-    void setState( int state );
+    void setExpanded( bool state );
 
-    const int& state() const;
-
-    void setDirection( Direction direction );
-
-    const Direction& direction() const;
+    const bool& expanded() const;
 
     Variable* variable();
+
+    void setValue( const QString& value );
 
     QString value() const;
 
@@ -105,9 +103,8 @@ protected:
 
     QVariant itemChange( GraphicsItemChange change, const QVariant &value );
 
-    Direction m_direction;
     QVector< Connection* > m_connections;
-    int m_state;
+    bool m_expanded;
     PortValue* m_valueText;
 
 };

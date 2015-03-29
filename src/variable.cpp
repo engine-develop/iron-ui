@@ -23,12 +23,13 @@ Variable::Variable( QGraphicsItem* parent )
     : QGraphicsPathItem( parent )
     , m_id( 0 )
     , m_typeId( 0 )
-    , m_direction( Output )
     , m_label( 0x0 )
     , m_codeAnchor( 0x0 )
+    , m_direction( Output )
     , m_port( 0x0 )
+    , m_attributeId( 0 )
 {
-    setFlags( QGraphicsItem::ItemIsMovable
+    setFlags(   QGraphicsItem::ItemIsMovable
               | QGraphicsItem::ItemIsSelectable
               | QGraphicsItem::ItemIsFocusable );
 
@@ -105,10 +106,25 @@ Node* Variable::node()
 //------------------------------------------------------------------------------
 //
 
+void Variable::setAttributeId( const uint8_t& id )
+{
+    m_attributeId = id;
+}
+
+//------------------------------------------------------------------------------
+//
+
+const uint8_t& Variable::attributeId() const
+{
+    return m_attributeId;
+}
+
+//------------------------------------------------------------------------------
+//
+
 void Variable::setDirection( const Direction& direction )
 {
     m_direction = direction;
-    m_port->setDirection( m_direction );
 
     update();
 }
