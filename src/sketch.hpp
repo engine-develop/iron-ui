@@ -73,3 +73,4 @@ bool read( const std::string& path,
            Sketch* sketch );
 
 #endif // IRUI_SKETCH_HPP
+.

@@ -97,7 +97,11 @@ int Port::type() const
 
 void Port::setExpanded( bool state )
 {
-    m_expanded = state;
+    if ( !( variable()->node()
+         && variable()->direction() == Output ) )
+    {
+        m_expanded = state;
+    }
 }
 
 //------------------------------------------------------------------------------
@@ -161,7 +165,7 @@ bool Port::isConnected( Port* other )
 
 void Port::mouseDoubleClickEvent( QGraphicsSceneMouseEvent* event )
 {
-    m_expanded = !m_expanded;
+    setExpanded( !m_expanded );
     update();
 
     event->accept();
@@ -230,15 +234,15 @@ void Port::update()
         {
             gradient.setFinalStop( -10.0, 10.0 );
             m_valueText->setPos( -70, -(pHeight-1)/2 );
+            m_valueText->show();
         }
 
         else if ( variable()->direction() == Output )
         {
             gradient.setStart( 10.0, 10.0 );
             m_valueText->setPos( 10, -(pHeight-1)/2 );
+            m_valueText->show();
         }
-
-        m_valueText->show();
     }
 
     else

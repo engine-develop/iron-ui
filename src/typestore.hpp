@@ -25,19 +25,19 @@ class QGraphicsScene;
 template< int T >
 struct TTypeStoreTypesListItem
 {
-    static EN_INLINE QString icon() { return ""; }
+    static IRON_INLINE QString icon() { return ""; }
 };
 
 template<>
 struct TTypeStoreTypesListItem< engine::Types_Variable >
 {
-    static EN_INLINE QString icon() { return ":/icons/resources/icons/variable.png"; }
+    static IRON_INLINE QString icon() { return ":/icons/resources/icons/variable.png"; }
 };
 
 template<>
 struct TTypeStoreTypesListItem< engine::Types_Node >
 {
-    static EN_INLINE QString icon() { return ":/icons/resources/icons/node.png"; }
+    static IRON_INLINE QString icon() { return ":/icons/resources/icons/node.png"; }
 };
 
 //------------------------------------------------------------------------------

@@ -30,7 +30,7 @@
 //
 
 template< class T >
-EN_INLINE T randRange( T low,
+IRON_INLINE T randRange( T low,
                        T high )
 {
     // Random number between low and high
